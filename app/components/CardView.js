@@ -1,5 +1,6 @@
 "use client";
 
+import { RotateCw } from "lucide-react";
 import { genderStyle } from "@/lib/german";
 
 /**
@@ -47,7 +48,7 @@ export default function CardView({ card, reveal = true, onClick }) {
           <div className="word">{frontText || "—"}</div>
           {card.prompt && isNoun && <div className="sub">Nomen — Artikel & Plural?</div>}
           {card.prompt && card.card_type === "verb" && <div className="sub">Verb — Stammformen?</div>}
-          <div className="hint">Tippen zum Umdrehen</div>
+          <div className="hint"><RotateCw size={13} /> Tippen zum Umdrehen</div>
         </>
       ) : (
         <>

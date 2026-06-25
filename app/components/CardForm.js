@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { X } from "lucide-react";
 import { CARD_TYPES, GENDERS } from "@/lib/german";
 import { uploadCardImage } from "@/lib/db";
 
@@ -85,7 +86,7 @@ export default function CardForm({ card, userId, onSave, onClose }) {
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="between" style={{ marginBottom: 14 }}>
           <div className="h2" style={{ margin: 0 }}>{card ? "Karte bearbeiten" : "Neue Karte"}</div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <button className="btn btn-ghost icon-btn" onClick={onClose} aria-label="Schließen"><X size={18} /></button>
         </div>
 
         {err && <div className="banner banner-err" style={{ marginBottom: 12 }}>{err}</div>}

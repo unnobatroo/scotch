@@ -2,25 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { GlassWater, Layers, GraduationCap, NotebookPen, CircleCheckBig, Settings, LogOut } from "lucide-react";
 import { useAuth } from "../providers";
 import Login from "./Login";
 
-/** Bottom-navigation destinations. */
+/** Primary navigation destinations (shared by sidebar and bottom nav). */
 const NAV = [
-  { href: "/karten", label: "Karten", icon: "🗂️" },
-  { href: "/lernen", label: "Lernen", icon: "🎯" },
-  { href: "/notizen", label: "Notizen", icon: "📝" },
-  { href: "/pruefen", label: "Prüfen", icon: "✅" },
+  { href: "/karten", label: "Karten", Icon: Layers },
+  { href: "/lernen", label: "Lernen", Icon: GraduationCap },
+  { href: "/notizen", label: "Notizen", Icon: NotebookPen },
+  { href: "/pruefen", label: "Prüfen", Icon: CircleCheckBig },
 ];
 
+function Brand({ size = 20 }) {
+  return (
+    <span className="brand" style={{ fontSize: size }}>
+      <GlassWater className="glass" size={size + 2} strokeWidth={2.2} />
+      Scotch<span className="dot">.</span>
+    </span>
+  );
+}
+
 /**
- * Persistent application shell. Gates content behind authentication and renders
- * the sticky top bar plus the mobile-first bottom navigation.
- * @param {{children: React.ReactNode}} props
+ * Persistent application shell. Gates content behind authentication, then renders
+ * a left sidebar on desktop and a sticky top bar + bottom nav on mobile.
  */
 export default function AppFrame({ children }) {
   const { user, loading, signOut } = useAuth();
   const pathname = usePathname() || "/";
+  const isActive = (href) => pathname.startsWith(href);
 
   if (loading) {
     return (
@@ -29,38 +39,56 @@ export default function AppFrame({ children }) {
       </div>
     );
   }
-
   if (!user) return <Login />;
 
   return (
-    <>
-      <header className="topbar">
-        <div className="brand">
-          Scotch<span>.</span>
-        </div>
-        <div className="row">
-          <Link href="/einstellungen" className="btn btn-ghost btn-sm" aria-label="Einstellungen">
-            ⚙︎
+    <div className="shell">
+      {/* Desktop sidebar */}
+      <aside className="sidebar">
+        <Brand size={24} />
+        {NAV.map(({ href, label, Icon }) => (
+          <Link key={href} href={href} className={`sidebar-link ${isActive(href) ? "active" : ""}`}>
+            <Icon size={20} strokeWidth={2.1} />
+            {label}
           </Link>
-          <button className="btn btn-ghost btn-sm" onClick={() => signOut()}>
+        ))}
+        <div className="sidebar-foot">
+          <Link href="/einstellungen" className={`sidebar-link ${isActive("/einstellungen") ? "active" : ""}`}>
+            <Settings size={20} strokeWidth={2.1} />
+            Einstellungen
+          </Link>
+          <button className="sidebar-link" style={{ background: "none", border: "none", width: "100%", textAlign: "left" }} onClick={() => signOut()}>
+            <LogOut size={20} strokeWidth={2.1} />
             Abmelden
           </button>
         </div>
-      </header>
+      </aside>
 
-      <main className="app-main">{children}</main>
-
-      <nav className="bottomnav">
-        {NAV.map((item) => {
-          const active = pathname.startsWith(item.href);
-          return (
-            <Link key={item.href} href={item.href} className={active ? "active" : ""}>
-              <span className="ico">{item.icon}</span>
-              {item.label}
+      {/* Main column */}
+      <div className="main">
+        <header className="topbar mobile-only">
+          <Brand size={20} />
+          <div className="row">
+            <Link href="/einstellungen" className="btn btn-ghost icon-btn" aria-label="Einstellungen">
+              <Settings size={20} />
             </Link>
-          );
-        })}
+            <button className="btn btn-ghost icon-btn" onClick={() => signOut()} aria-label="Abmelden">
+              <LogOut size={20} />
+            </button>
+          </div>
+        </header>
+        <div className="content">{children}</div>
+      </div>
+
+      {/* Mobile bottom nav */}
+      <nav className="bottomnav mobile-only">
+        {NAV.map(({ href, label, Icon }) => (
+          <Link key={href} href={href} className={isActive(href) ? "active" : ""}>
+            <Icon size={21} strokeWidth={2.1} />
+            {label}
+          </Link>
+        ))}
       </nav>
-    </>
+    </div>
   );
 }

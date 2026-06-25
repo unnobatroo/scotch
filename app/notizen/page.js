@@ -1,222 +1,191 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { Plus, FolderPlus, Download, Trash2, NotebookPen, X, ChevronLeft } from "lucide-react";
 import { useAuth } from "../providers";
 import {
   listGroups, createGroup, deleteGroup,
   listNotes, createNote, updateNote, deleteNote,
 } from "@/lib/db";
 import { SEED_NOTES } from "@/lib/seedNotes";
-import MarkdownEditor from "../components/MarkdownEditor";
+import LiveEditor from "../components/LiveEditor";
+
+/** Plain-text preview snippet from Markdown for the note cards. */
+function snippet(md) {
+  return (md || "")
+    .replace(/[#>*_`~\-|]/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 /**
- * Notes section — a lightweight, Notion-style space: notes grouped into folders,
- * edited in Markdown. Includes a one-click import of the user's Notion German
- * grammar notes (bundled in lib/seedNotes.js).
+ * Notes — a Notion-style board: note groups are columns, notes are cards.
+ * Clicking a card opens a full editor with an Obsidian-style live preview.
+ * Includes one-click import of the user's Notion grammar notes.
  */
 export default function NotizenPage() {
   const { user } = useAuth();
   const [groups, setGroups] = useState([]);
   const [notes, setNotes] = useState([]);
-  const [activeId, setActiveId] = useState(null);
+  const [openId, setOpenId] = useState(null); // note open in the editor
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [err, setErr] = useState(null);
   const saveTimer = useRef(null);
 
-  const active = notes.find((n) => n.id === activeId) || null;
+  const open = notes.find((n) => n.id === openId) || null;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [g, n] = await Promise.all([listGroups(), listNotes()]);
-      setGroups(g);
-      setNotes(n);
-      if (!activeId && n.length) setActiveId(n[0].id);
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeId]);
+      setGroups(g); setNotes(n);
+    } catch (e) { setErr(e.message); } finally { setLoading(false); }
+  }, []);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { load(); }, [load]);
 
-  /* ---- mutations ---- */
   async function newNote(groupId = null) {
     const n = await createNote(user.id, { title: "Neue Notiz", content: "", group_id: groupId });
-    setNotes((prev) => [n, ...prev]);
-    setActiveId(n.id);
+    setNotes((prev) => [n, ...prev]); setOpenId(n.id);
   }
-
   async function newGroup() {
     const name = prompt("Name der Gruppe?");
     if (!name) return;
     const g = await createGroup(user.id, name.trim());
     setGroups((prev) => [...prev, g]);
   }
-
   async function removeGroup(g) {
     if (!confirm(`Gruppe „${g.name}" löschen? (Notizen bleiben erhalten)`)) return;
-    await deleteGroup(g.id);
-    load();
+    await deleteGroup(g.id); load();
   }
-
   async function removeNote(n) {
     if (!confirm("Notiz löschen?")) return;
     await deleteNote(n.id);
     setNotes((prev) => prev.filter((x) => x.id !== n.id));
-    if (activeId === n.id) setActiveId(null);
+    setOpenId(null);
   }
-
-  /** Debounced autosave of the active note's title/content. */
-  function patchActive(patch) {
-    setNotes((prev) => prev.map((n) => (n.id === activeId ? { ...n, ...patch } : n)));
+  function patchOpen(patch) {
+    setNotes((prev) => prev.map((n) => (n.id === openId ? { ...n, ...patch } : n)));
     clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      updateNote(activeId, patch).catch((e) => setErr(e.message));
-    }, 600);
+    saveTimer.current = setTimeout(() => { updateNote(openId, patch).catch((e) => setErr(e.message)); }, 600);
   }
-
   async function changeGroup(groupId) {
     const g = groupId || null;
-    setNotes((prev) => prev.map((n) => (n.id === activeId ? { ...n, group_id: g } : n)));
-    await updateNote(activeId, { group_id: g });
+    setNotes((prev) => prev.map((n) => (n.id === openId ? { ...n, group_id: g } : n)));
+    await updateNote(openId, { group_id: g });
   }
 
-  /** Import the bundled Notion grammar notes, creating groups as needed. */
   async function importSeed() {
     if (!confirm(`${SEED_NOTES.length} Notizen aus Notion importieren?`)) return;
-    setImporting(true);
-    setErr(null);
+    setImporting(true); setErr(null);
     try {
-      // Reuse existing groups by name; create the rest.
       const byName = {};
       for (const g of groups) byName[g.name] = g.id;
-      const created = [];
       for (const note of SEED_NOTES) {
         if (!byName[note.group]) {
           const g = await createGroup(user.id, note.group);
           byName[note.group] = g.id;
         }
-        const n = await createNote(user.id, {
-          title: note.title,
-          content: note.content,
-          group_id: byName[note.group],
-        });
-        created.push(n);
+        await createNote(user.id, { title: note.title, content: note.content, group_id: byName[note.group] });
       }
       await load();
-      if (created[0]) setActiveId(created[0].id);
-    } catch (e) {
-      setErr("Import fehlgeschlagen: " + e.message);
-    } finally {
-      setImporting(false);
-    }
+    } catch (e) { setErr("Import fehlgeschlagen: " + e.message); }
+    finally { setImporting(false); }
   }
 
-  /* ---- grouping for the sidebar ---- */
-  const ungrouped = notes.filter((n) => !n.group_id);
   const notesByGroup = (gid) => notes.filter((n) => n.group_id === gid);
+  const ungrouped = notes.filter((n) => !n.group_id);
+
+  /* ----------------------------- Editor view ----------------------------- */
+  if (open) {
+    return (
+      <div>
+        <div className="between" style={{ marginBottom: 12 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setOpenId(null)}><ChevronLeft size={16} /> Notizen</button>
+          <button className="btn btn-sm btn-danger" onClick={() => removeNote(open)}><Trash2 size={15} /> Löschen</button>
+        </div>
+        {err && <div className="banner banner-err" style={{ marginBottom: 12 }}>{err}</div>}
+        <div className="card pad">
+          <input
+            className="input"
+            style={{ fontFamily: "var(--font-display)", fontWeight: 800, fontSize: 26, border: "none", padding: "2px 0", marginBottom: 8 }}
+            value={open.title}
+            onChange={(e) => patchOpen({ title: e.target.value })}
+            placeholder="Titel"
+          />
+          <div className="row" style={{ marginBottom: 14 }}>
+            <select className="select" style={{ maxWidth: 260 }} value={open.group_id || ""} onChange={(e) => changeGroup(e.target.value)}>
+              <option value="">Ohne Gruppe</option>
+              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            <span className="small muted">Automatisch gespeichert</span>
+          </div>
+          <LiveEditor key={open.id} value={open.content} onChange={(v) => patchOpen({ content: v })} />
+        </div>
+      </div>
+    );
+  }
+
+  /* ----------------------------- Board view ------------------------------ */
+  const Column = ({ id, title, items, onAdd, onDelete }) => (
+    <div className="board-col">
+      <div className="board-col-head">
+        <span className="board-col-title">{title} <span className="board-col-count">{items.length}</span></span>
+        <span className="row" style={{ gap: 2 }}>
+          <button className="btn btn-ghost icon-btn" style={{ padding: 5 }} title="Notiz hinzufügen" onClick={onAdd}><Plus size={15} /></button>
+          {onDelete && <button className="btn btn-ghost icon-btn" style={{ padding: 5 }} title="Gruppe löschen" onClick={onDelete}><X size={15} /></button>}
+        </span>
+      </div>
+      {items.map((n) => (
+        <div key={n.id} className="note-card" onClick={() => setOpenId(n.id)}>
+          <div className="nc-title">{n.title || "Untitled"}</div>
+          {snippet(n.content) && <div className="nc-prev">{snippet(n.content)}</div>}
+        </div>
+      ))}
+      <button className="col-add" onClick={onAdd}><Plus size={15} /> Notiz</button>
+    </div>
+  );
 
   return (
     <div>
       <div className="between">
         <h1 className="h1">Notizen</h1>
         <div className="row">
-          <button className="btn btn-sm" onClick={newGroup}>+ Gruppe</button>
-          <button className="btn btn-primary btn-sm" onClick={() => newNote()}>+ Notiz</button>
+          <button className="btn btn-sm" onClick={newGroup}><FolderPlus size={16} /> Gruppe</button>
+          <button className="btn btn-primary btn-sm" onClick={() => newNote()}><Plus size={16} /> Notiz</button>
         </div>
       </div>
       {err && <div className="banner banner-err">{err}</div>}
 
       {loading ? (
         <div className="empty"><div className="spinner" style={{ margin: "0 auto" }} /></div>
-      ) : notes.length === 0 ? (
+      ) : notes.length === 0 && groups.length === 0 ? (
         <div className="empty">
+          <NotebookPen className="empty-ico" size={40} />
           <p>Noch keine Notizen.</p>
           <button className="btn btn-primary" onClick={importSeed} disabled={importing}>
-            {importing ? "Importiert…" : "📥 Aus Notion importieren"}
+            <Download size={16} /> {importing ? "Importiert…" : "Aus Notion importieren"}
           </button>
-          <p className="small muted" style={{ marginTop: 10 }}>
-            oder lege mit „+ Notiz" eine eigene an.
-          </p>
         </div>
       ) : (
-        <div className="notes-grid">
-          {/* Sidebar */}
-          <aside className="note-list">
-            {groups.map((g) => (
-              <div key={g.id}>
-                <div className="between">
-                  <div className="group-head">{g.name}</div>
-                  <div className="row">
-                    <button className="btn btn-ghost btn-sm" title="Notiz hinzufügen" onClick={() => newNote(g.id)}>+</button>
-                    <button className="btn btn-ghost btn-sm" title="Gruppe löschen" onClick={() => removeGroup(g)}>✕</button>
-                  </div>
-                </div>
-                {notesByGroup(g.id).map((n) => (
-                  <div
-                    key={n.id}
-                    className={`note-item ${n.id === activeId ? "active" : ""}`}
-                    onClick={() => setActiveId(n.id)}
-                    style={{ cursor: "pointer", marginBottom: 6 }}
-                  >
-                    {n.title || "Untitled"}
-                  </div>
-                ))}
-              </div>
-            ))}
-
-            {ungrouped.length > 0 && (
-              <>
-                <div className="group-head">Ohne Gruppe</div>
-                {ungrouped.map((n) => (
-                  <div
-                    key={n.id}
-                    className={`note-item ${n.id === activeId ? "active" : ""}`}
-                    onClick={() => setActiveId(n.id)}
-                    style={{ cursor: "pointer", marginBottom: 6 }}
-                  >
-                    {n.title || "Untitled"}
-                  </div>
-                ))}
-              </>
-            )}
-          </aside>
-
-          {/* Editor */}
-          <section>
-            {active ? (
-              <>
-                <input
-                  className="input"
-                  style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}
-                  value={active.title}
-                  onChange={(e) => patchActive({ title: e.target.value })}
-                  placeholder="Titel"
-                />
-                <div className="between" style={{ marginBottom: 8 }}>
-                  <select
-                    className="select"
-                    style={{ maxWidth: 220 }}
-                    value={active.group_id || ""}
-                    onChange={(e) => changeGroup(e.target.value)}
-                  >
-                    <option value="">Ohne Gruppe</option>
-                    {groups.map((g) => (
-                      <option key={g.id} value={g.id}>{g.name}</option>
-                    ))}
-                  </select>
-                  <button className="btn btn-sm btn-danger" onClick={() => removeNote(active)}>Löschen</button>
-                </div>
-                <MarkdownEditor value={active.content} onChange={(v) => patchActive({ content: v })} />
-                <p className="small muted" style={{ textAlign: "right" }}>Automatisch gespeichert</p>
-              </>
-            ) : (
-              <div className="empty">Wähle links eine Notiz aus.</div>
-            )}
-          </section>
+        <div className="board">
+          {groups.map((g) => (
+            <Column
+              key={g.id}
+              id={g.id}
+              title={g.name}
+              items={notesByGroup(g.id)}
+              onAdd={() => newNote(g.id)}
+              onDelete={() => removeGroup(g)}
+            />
+          ))}
+          {ungrouped.length > 0 && (
+            <Column id={null} title="Ohne Gruppe" items={ungrouped} onAdd={() => newNote(null)} />
+          )}
+          <button className="btn add-col" onClick={newGroup}><FolderPlus size={16} /> Gruppe</button>
         </div>
       )}
     </div>
