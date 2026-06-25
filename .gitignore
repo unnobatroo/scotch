@@ -1,0 +1,16 @@
+# Dependencies & build output
+node_modules
+.next
+out
+
+# Environment
+.env
+.env*.local
+
+# OS
+.DS_Store
+
+# Agent-only files (memory tree & instructions — not part of the app)
+CLAUDE.md
+vault/
+.obsidian/

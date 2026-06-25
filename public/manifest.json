@@ -1,0 +1,10 @@
+{
+  "name": "Scotch — Deutsch lernen",
+  "short_name": "Scotch",
+  "description": "Flashcards, notes and an AI answer-checker for learning German.",
+  "start_url": "/karten",
+  "display": "standalone",
+  "background_color": "#f7f7f8",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait"
+}
