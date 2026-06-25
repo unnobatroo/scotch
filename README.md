@@ -1,122 +1,19 @@
 # 🥃 Scotch
 
-A mobile-first web app for learning German — **flashcards** with German-specific
-layouts and gender colour-coding, **Notion-style notes** in Markdown, and an
-**AI answer-checker** that grades your exercises against a key you provide.
+Ich lerne Deutsch — und irgendwann hatte ich keine Lust mehr, zwischen fünf verschiedenen Apps hin- und herzuwechseln. Anki ist zu klobig, Notion zu generisch, Duolingo eher Gamification als echtes Lernen. Also hab ich mein eigenes Ding gebaut.
 
-Built to be studied on the go (bus, train, phone) and to grow as a personal
-project.
+Scotch ist eine persönliche Lern-App mit drei Bereichen: Karteikarten mit Leitner-System, Markdown-Notizen im Kanban-Board-Stil, und ein KI-Korrektor der meine Übungsantworten gegen den echten Lösungsschlüssel aus dem Buch prüft. Alles mobile-first, weil ich meistens im Bus oder in der U-Bahn lerne.
 
----
+## Was drin steckt
 
-## Features
+Die Karteikarten sind auf deutsche Grammatik zugeschnitten — Nomen haben Artikel + Singular/Plural und sind farblich nach Genus kodiert (`der` blau, `die` pink-rot, `das` grün, Pluralwörter gelb), Verben haben die drei Stammformen plus Hilfsverb, und für alles andere gibt's ein freies Format. Beim Lernen läuft Spaced Repetition nach dem Leitner-System: richtige Antwort → nächste Box, falsche → zurück zu Box 1. Simple, aber es funktioniert.
 
-### 🗂️ Flashcards (`/karten`)
-- **Decks** of cards you create yourself, with optional images.
-- **Noun cards** — three articles + singular/plural, colour-coded by gender:
-  - `der` (maskulin) → **blue**
-  - `die` (feminin) → **pink-red**
-  - `das` (neutrum) → **green**
-  - plural-only → **yellow**
-- **Verb cards** — the three Stammformen (Infinitiv · Präteritum · Partizip II) plus the auxiliary (haben/sein).
-- **Other cards** — free-form front/back.
+Die Notizen sind ein schlanker Notion-Ersatz für Grammatiknotizen. Der Editor ist CodeMirror 6 mit Obsidian-style Live-Preview — Formatierungszeichen verschwinden wenn der Cursor weg ist, Tabellen und Bilder werden als echte Elemente gerendert, die Markdown-Quelle bleibt die einzige Source of Truth. Tab in einer Tabelle formatiert automatisch alle Spalten auf die gleiche Breite (JetBrains-Stil) und springt zur nächsten Zelle.
 
-### 🎯 Study (`/lernen`)
-Spaced repetition with the **Leitner system**: correct answers move a card to a
-higher box (longer interval); wrong answers send it back to box 1. Study one deck
-or all due cards.
+Der KI-Korrektor ist der Teil, an dem ich am längsten saß und den ich am häufigsten benutze. Lösungsschlüssel einmal als PDF hochladen, dann nur noch Antworten reinkopieren. `lib/retrieval.js` findet die richtigen Seiten per Token-Überlappung, schickt sie an ein LLM, und bekommt zurück: was falsch war, welche Grammatikregel dahintersteckt, und wo im Buch das erklärt wird. Kein Vektorspeicher, kein Overhead — funktioniert für den Anwendungsfall gut genug.
 
-### 📝 Notes (`/notizen`)
-A lightweight Notion alternative: notes grouped into folders, edited in **Markdown**
-with live preview. One-click **import** of your Notion *German Grammar Notes*
-(bundled in `lib/seedNotes.js`).
+## Stack
 
-### ✅ Answer-checker (`/pruefen`)
-Paste your answers and the official key. A small LLM compares them, identifies the
-**Modul / Kapitel / Seite**, shows exactly where you went wrong, explains the rule
-in **German**, and links to an article on the topic. Provider is swappable
-(see below).
+Next.js 14 mit App Router, JavaScript (kein TypeScript — für ein Soloprojekt war die Reibung nicht wert), deployed auf Vercel. Datenbank und Auth über Supabase: Postgres mit Row-Level Security auf jeder Tabelle, sodass `user_id = auth.uid()` auf Datenbankebene erzwungen wird und nicht im App-Code. Der anon-Key im Browser ist sicher genau weil RLS alles filtert.
 
----
-
-## Tech stack
-
-| Layer | Choice | Why |
-|---|---|---|
-| Frontend + API | **Next.js 14** (App Router) on **Vercel** | One language end-to-end; serverless API routes; native Vercel deploy |
-| Database / Auth / Storage | **Supabase** (Postgres) | Managed Postgres with built-in auth, file storage and Row-Level Security |
-| AI grading | Swappable: **Claude Haiku** (default), **Groq**, **OpenRouter** | Cheap by default; free open-model options; no GPU to host |
-
----
-
-## Security
-
-- **Row-Level Security** on every table — each user can only read/write rows where
-  `user_id = auth.uid()`. Enforced by Postgres, not by app code.
-- The Supabase **publishable (anon) key** is the only key in the browser; it is
-  safe to expose because RLS protects the data.
-- **AI provider API keys live only in server environment variables** and are used
-  inside the `/api/grade` route handler. They are never sent to the browser and
-  never prefixed with `NEXT_PUBLIC`.
-- Image uploads are scoped to a per-user folder in the `card-images` bucket.
-- Markdown is sanitised (script/handler/`javascript:` stripping) before render.
-
----
-
-## Local development
-
-```bash
-npm install
-cp .env.example .env.local   # fill in an AI key if you want the grader
-npm run dev                  # http://localhost:3000
-```
-
-The Supabase URL and publishable key have safe defaults baked in, so the app runs
-without any env file — you only need a key for the `/pruefen` grader.
-
----
-
-## Deployment (Vercel)
-
-1. Push this repo to GitHub.
-2. Import it in Vercel (framework auto-detected as Next.js).
-3. Add environment variables (Project → Settings → Environment Variables):
-   - `ANTHROPIC_API_KEY` (or `GROQ_API_KEY` / `OPENROUTER_API_KEY`)
-   - optionally `ANTHROPIC_MODEL`, etc.
-4. Deploy.
-
-Pick the active provider in the app under **⚙︎ Einstellungen**.
-
----
-
-## Project structure
-
-```
-app/
-  layout.js            Root layout, auth provider, app frame
-  providers.js         Supabase auth context
-  components/          AppFrame, Login, CardView, CardForm, MarkdownEditor
-  karten/              Flashcards (decks + cards)
-  lernen/              Leitner study mode
-  notizen/             Markdown notes + groups + Notion import
-  pruefen/             AI answer-checker UI
-  einstellungen/       Provider settings
-  api/grade/route.js   Server-only grading endpoint (provider dispatch)
-lib/
-  supabase.js          Browser Supabase client
-  db.js                Documented data-access helpers
-  german.js            Gender colour system + Leitner intervals
-  seedNotes.js         Notion grammar notes (importable)
-```
-
----
-
-## Database schema
-
-Tables (all with RLS): `decks`, `cards`, `note_groups`, `notes`, `grader_results`,
-plus a public `card-images` storage bucket. See the migration in the Supabase
-project `deutsch-study` for the full DDL.
-
----
-
-_Personal project — built for learning German and for fun._
+Für die KI ist Groq der Standard (kostenlos, schnell), Claude die Empfehlung für den Korrektor weil er bei deutschen Grammatikerklärungen deutlich besser ist. Beide laufen über `lib/llm.js`, API-Keys nur server-seitig.
