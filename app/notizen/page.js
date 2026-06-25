@@ -171,21 +171,23 @@ export default function NotizenPage() {
           </button>
         </div>
       ) : (
-        <div className="board">
-          {groups.map((g) => (
-            <Column
-              key={g.id}
-              id={g.id}
-              title={g.name}
-              items={notesByGroup(g.id)}
-              onAdd={() => newNote(g.id)}
-              onDelete={() => removeGroup(g)}
-            />
-          ))}
-          {ungrouped.length > 0 && (
-            <Column id={null} title="Ohne Gruppe" items={ungrouped} onAdd={() => newNote(null)} />
-          )}
-          <button className="btn add-col" onClick={newGroup}><FolderPlus size={16} /> Gruppe</button>
+        <div className="board-wrap">
+          <div className="board">
+            {groups.map((g) => (
+              <Column
+                key={g.id}
+                id={g.id}
+                title={g.name}
+                items={notesByGroup(g.id)}
+                onAdd={() => newNote(g.id)}
+                onDelete={() => removeGroup(g)}
+              />
+            ))}
+            {ungrouped.length > 0 && (
+              <Column id={null} title="Ohne Gruppe" items={ungrouped} onAdd={() => newNote(null)} />
+            )}
+            <button className="btn add-col" onClick={newGroup}><FolderPlus size={16} /> Gruppe</button>
+          </div>
         </div>
       )}
     </div>

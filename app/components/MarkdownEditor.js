@@ -21,7 +21,12 @@ function sanitize(html) {
 
 /** Render Markdown to safe HTML. */
 export function renderMarkdown(md) {
-  return sanitize(marked.parse(md || ""));
+  let html = sanitize(marked.parse(md || ""));
+  // Wrap tables in a scrollable container for proper overflow + clean styling
+  html = html
+    .replace(/<table>/g, '<div class="table-wrap"><table>')
+    .replace(/<\/table>/g, "</table></div>");
+  return html;
 }
 
 /**
