@@ -129,7 +129,10 @@ svg { flex-shrink: 0; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
 .pad { padding: 18px; }
 
-.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; align-items: stretch; }
+/* Import review cards: each grid cell is a column whose flashcard fills the row height so cards line up evenly. */
+.import-card { display: flex; flex-direction: column; height: 100%; }
+.import-card .flash { flex: 1 1 auto; }
 .split { display: grid; grid-template-columns: 1fr; gap: 18px; }
 @media (min-width: 900px) { .split.has-result { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
 
@@ -185,6 +188,9 @@ svg { flex-shrink: 0; }
 .flash:active { transform: scale(0.995); }
 .flash .word { font-family: var(--font-display); font-size: 32px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
 .flash .sub { font-size: 16px; color: var(--muted); margin-top: 8px; }
+/* English translation — visually distinct from the grey Sg./Pl. line and italic example. */
+.flash .translation { margin-top: 12px; font-size: 15px; font-weight: 700; color: var(--accent-strong);
+  background: var(--accent-soft); border-radius: 999px; padding: 4px 13px; }
 .flash img { max-width: 100%; max-height: 170px; border-radius: 14px; margin: 10px 0; object-fit: contain; }
 .flash .hint { position: absolute; bottom: 14px; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
 

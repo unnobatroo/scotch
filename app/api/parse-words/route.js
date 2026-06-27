@@ -40,11 +40,13 @@ Each element of "cards" has these fields:
 - verb_praeteritum: 3rd person singular Präteritum, e.g. "ging"
 - verb_partizip: Partizip II, e.g. "gegangen"
 - verb_aux: "haben" or "sein"
+- answer: for "other" cards ONLY, the German word/phrase exactly as it should be learned, e.g. "alleinerziehend", "trotzdem", "zu Hause". Leave "" for nouns and verbs.
 - prompt: concise English meaning/translation
 - example: a short natural German example sentence
 - image_query: 1-3 word concrete English search term for a photo, or "" if the word is abstract
 
 Leave fields that do not apply to a word as an empty string "".
+Every "other" card MUST have a non-empty "answer" (the German term); never leave it blank.
 
 TEXT:
 ${text}`;
@@ -66,7 +68,7 @@ function sanitizeCard(c) {
     verb_partizip: String(c.verb_partizip || "").slice(0, 120),
     verb_aux: aux,
     prompt: String(c.prompt || "").slice(0, 200),
-    answer: "",
+    answer: String(c.answer || "").slice(0, 200),
     example: String(c.example || "").slice(0, 240),
     image_query: String(c.image_query || "").slice(0, 60),
     image_url: "",

@@ -94,14 +94,12 @@ export default function CardView({ card, reveal = true, onClick }) {
           {card.card_type === "other" && (
             <>
               <div className="word">{card.answer || "—"}</div>
-              {card.prompt && <div className="sub">{card.prompt}</div>}
+              {card.prompt && <div className="translation">{card.prompt}</div>}
             </>
           )}
 
           {card.prompt && card.card_type !== "other" && (
-            <div className="sub" style={{ marginTop: 8 }}>
-              {card.prompt}
-            </div>
+            <div className="translation">{card.prompt}</div>
           )}
           {card.example && (
             <div className="small muted" style={{ marginTop: 10, fontStyle: "italic" }}>

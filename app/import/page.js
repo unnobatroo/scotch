@@ -211,7 +211,7 @@ export default function ImportPage() {
 
           <div className="grid-cards">
             {cards.map((c, i) => (
-              <div key={i} style={{ opacity: c._include ? 1 : 0.45 }}>
+              <div className="import-card" key={i} style={{ opacity: c._include ? 1 : 0.45 }}>
                 <CardView card={c} reveal />
                 <div className="row" style={{ justifyContent: "flex-end", marginTop: 6 }}>
                   <button className={`btn btn-sm ${c._include ? "btn-danger" : "btn-primary"}`} onClick={() => toggle(i)}>
