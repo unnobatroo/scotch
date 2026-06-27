@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { GlassWater, Layers, GraduationCap, NotebookPen, CircleCheckBig, Settings, LogOut } from "lucide-react";
+import { GlassWater, Layers, GraduationCap, CircleCheckBig, Settings, LogOut } from "lucide-react";
 import { useAuth } from "../providers";
 import Login from "./Login";
 
@@ -10,7 +10,6 @@ import Login from "./Login";
 const NAV = [
   { href: "/karten", label: "Karten", Icon: Layers },
   { href: "/lernen", label: "Lernen", Icon: GraduationCap },
-  { href: "/notizen", label: "Notizen", Icon: NotebookPen },
   { href: "/pruefen", label: "Prüfen", Icon: CircleCheckBig },
 ];
 

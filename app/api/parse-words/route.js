@@ -26,21 +26,25 @@ function buildPrompt(text) {
 Use YOUR OWN knowledge to fill in correct grammar even if the source only lists the bare word.
 Skip duplicates and non-words. Return at most ${MAX_CARDS} cards.
 
-Return ONLY a JSON array (no prose, no markdown) where each element is:
-{
-  "card_type": "noun" | "verb" | "other",
-  "noun_word": "noun without article (only for nouns)",
-  "noun_gender": "der" | "die" | "das" | "plural",   // grammatical gender; "plural" only if the word is plural-only
-  "noun_singular": "article + singular, e.g. der Tisch",
-  "noun_plural": "article + plural, e.g. die Tische",
-  "verb_infinitiv": "infinitive (only for verbs)",
-  "verb_praeteritum": "3rd person singular Präteritum, e.g. ging",
-  "verb_partizip": "Partizip II, e.g. gegangen",
-  "verb_aux": "haben" | "sein",
-  "prompt": "concise English meaning/translation",
-  "example": "a short natural German example sentence",
-  "image_query": "1-3 word concrete English search term for a photo, or \\"\\" if the word is abstract"
-}
+Output rules (strict):
+- Return ONLY a single minified JSON object of the form {"cards": [ ... ]}.
+- No prose, no markdown, no code fences, no comments, no trailing commas.
+
+Each element of "cards" has these fields:
+- card_type: one of "noun", "verb", "other"
+- noun_word: noun without article (nouns only)
+- noun_gender: one of "der", "die", "das", "plural" (use "plural" only for plural-only words)
+- noun_singular: article + singular, e.g. "der Tisch"
+- noun_plural: article + plural, e.g. "die Tische"
+- verb_infinitiv: infinitive (verbs only)
+- verb_praeteritum: 3rd person singular Präteritum, e.g. "ging"
+- verb_partizip: Partizip II, e.g. "gegangen"
+- verb_aux: "haben" or "sein"
+- prompt: concise English meaning/translation
+- example: a short natural German example sentence
+- image_query: 1-3 word concrete English search term for a photo, or "" if the word is abstract
+
+Leave fields that do not apply to a word as an empty string "".
 
 TEXT:
 ${text}`;
@@ -79,7 +83,8 @@ export async function POST(req) {
       provider: body.provider,
       system: SYSTEM,
       prompt: buildPrompt(text),
-      maxTokens: 4000,
+      maxTokens: 8000, // ~60 detailed cards; 4000 truncated the array and broke JSON
+      json: true, // ask OpenAI-compatible providers for a strict JSON object
     });
     const parsed = parseModelJson(raw);
     const list = Array.isArray(parsed) ? parsed : parsed.cards || [];

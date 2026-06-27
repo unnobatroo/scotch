@@ -42,7 +42,7 @@ export default function Login() {
           Scotch<span className="dot">.</span>
         </div>
         <p className="muted small" style={{ marginTop: 0, marginBottom: 18 }}>
-          Deutsch lernen — Karten, Notizen und ein KI-Korrektor.
+          Deutsch lernen — Karten und ein KI-Korrektor.
         </p>
 
         {msg && (
